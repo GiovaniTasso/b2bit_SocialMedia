@@ -22,7 +22,7 @@ const Login: React.FC = () => {
       await login(username, password);
       navigate('/feed');
     } catch (err) {
-      // Error is handled in the context
+
     }
   };
 

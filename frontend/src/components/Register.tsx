@@ -14,8 +14,7 @@ const Register: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLocalError(null);
-    
-    // Validation
+
     if (!username || !email || !password || !confirmPassword) {
       setLocalError('Please fill in all fields');
       return;
@@ -30,7 +29,7 @@ const Register: React.FC = () => {
       await register(username, email, password);
       navigate('/feed');
     } catch (err) {
-      // Error is handled in the context
+
     }
   };
 

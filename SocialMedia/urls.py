@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import RegisterView, ProfileView, PostListCreateView, PostDetailView, like_post, follow_user, unfollow_user, feed, user_list, user_profile, follow_status
+from .views import RegisterView, ProfileView, PostListCreateView, PostDetailView, like_post, follow_user, unfollow_user, feed, user_list, user_profile, follow_status, user_posts
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
@@ -12,5 +12,6 @@ urlpatterns = [
     path('users/<int:pk>/follow/', follow_user, name='follow-user'),
     path('users/<int:pk>/unfollow/', unfollow_user, name='unfollow-user'),
     path('users/<int:pk>/follow-status/', follow_status, name='follow-status'),
+    path('users/<int:pk>/posts/', user_posts, name='user-posts'),
     path('feed/', feed, name='feed'),
 ]

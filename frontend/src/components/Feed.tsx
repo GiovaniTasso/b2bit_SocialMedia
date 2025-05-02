@@ -10,6 +10,7 @@ interface Post {
   content: string;
   created_at: string;
   likes_count: number;
+  liked?: boolean;
 }
 
 const Feed: React.FC = () => {
@@ -53,14 +54,15 @@ const Feed: React.FC = () => {
 
   const handleLikePost = async (postId: number) => {
     try {
-      await axios.post(`/api/posts/${postId}/like/`);
-      // Update the post in the state
-      setPosts(posts.map(post => 
-        post.id === postId ? { ...post, likes_count: post.likes_count + 1 } : post
+      const response = await axios.post(`/api/posts/${postId}/like/`);
+      const { liked, likes_count } = response.data;
+
+      setPosts(posts.map(post =>
+        post.id === postId ? { ...post, liked, likes_count } : post
       ));
     } catch (err) {
-      console.error('Error liking post:', err);
-      setError('Failed to like post. Please try again.');
+      console.error('Error toggling like on post:', err);
+      setError('Failed to toggle like on post. Please try again.');
     }
   };
 
@@ -103,8 +105,11 @@ const Feed: React.FC = () => {
             </div>
             <p>{post.content}</p>
             <div className="post-actions">
-              <button onClick={() => handleLikePost(post.id)}>
-                Like ({post.likes_count})
+              <button 
+                onClick={() => handleLikePost(post.id)}
+                className={post.liked ? "liked-button" : ""}
+              >
+                {post.liked ? "Unlike" : "Like"} ({post.likes_count})
               </button>
             </div>
           </div>

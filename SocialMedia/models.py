@@ -2,8 +2,8 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 class User(AbstractUser):
-    followers = models.ManyToManyField('self', related_name='followers')
-    following = models.ManyToManyField('self', related_name='following')
+    followers = models.ManyToManyField('self', symmetrical=False, related_name='followed_by')
+    following = models.ManyToManyField('self', symmetrical=False, related_name='follows')
 
     def followers_count(self):
         return self.followers.count()

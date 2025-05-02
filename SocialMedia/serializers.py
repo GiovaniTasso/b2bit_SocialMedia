@@ -5,8 +5,8 @@ from SocialMedia.models import User, Post
 
 
 class UserSerializer(serializers.ModelSerializer):
-    followers_count = serializers.IntegerField()
-    following_count = serializers.IntegerField()
+    followers_count = serializers.IntegerField(read_only=True)
+    following_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = User
@@ -27,13 +27,20 @@ class PostSerializer(serializers.ModelSerializer):
     likes_count = serializers.IntegerField(read_only=True)
     user = serializers.PrimaryKeyRelatedField(read_only=True)
     username = serializers.SerializerMethodField()
+    liked = serializers.SerializerMethodField()
 
     class Meta:
         model = Post
-        fields = ['id', 'user', 'username', 'content', 'created_at', 'likes_count']
+        fields = ['id', 'user', 'username', 'content', 'created_at', 'likes_count', 'liked']
 
     def get_username(self, obj):
         return obj.user.username
+
+    def get_liked(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return obj.likes.filter(id=request.user.id).exists()
+        return False
 
 
 class PostRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):

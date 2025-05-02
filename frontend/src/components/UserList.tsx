@@ -25,13 +25,13 @@ const UserList: React.FC = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      // Fetch all users
+
       const response = await axios.get('/api/users/');
       const userData = response.data;
 
       setUsers(userData);
 
-      // Check if current user is following each user
+
       if (currentUser) {
         const followStatusObj: {[key: number]: boolean} = {};
         for (const user of userData) {
@@ -60,14 +60,14 @@ const UserList: React.FC = () => {
   const handleFollowToggle = async (userId: number) => {
     try {
       if (followingStatus[userId]) {
-        // Unfollow
+
         await axios.post(`/api/users/${userId}/unfollow/`);
         setFollowingStatus({
           ...followingStatus,
           [userId]: false
         });
       } else {
-        // Follow
+
         await axios.post(`/api/users/${userId}/follow/`);
         setFollowingStatus({
           ...followingStatus,
@@ -75,7 +75,7 @@ const UserList: React.FC = () => {
         });
       }
 
-      // Refresh the user list to update follower counts
+
       fetchUsers();
     } catch (err) {
       console.error('Error toggling follow status:', err);

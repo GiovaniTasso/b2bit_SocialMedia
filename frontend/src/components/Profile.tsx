@@ -21,25 +21,26 @@ interface UserProfile {
 }
 
 const Profile: React.FC = () => {
-  const { user } = useContext(AuthContext);
+  const { user, loading: authLoading } = useContext(AuthContext);
   const { userId } = useParams<{ userId?: string }>();
   const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [newPostContent, setNewPostContent] = useState('');
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [editingPostId, setEditingPostId] = useState<number | null>(null);
+  const [editedContent, setEditedContent] = useState<string>('');
   const isOwnProfile = !userId || (user && userId === user.id.toString());
 
   useEffect(() => {
-    if (user) {
+    if (!authLoading && user) {
       fetchUserProfile();
       fetchUserPosts();
       if (!isOwnProfile) {
         checkFollowStatus();
       }
     }
-  }, [user, userId]);
+  }, [user, userId, authLoading]);
 
   const fetchUserProfile = async () => {
     try {
@@ -55,11 +56,10 @@ const Profile: React.FC = () => {
   const fetchUserPosts = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/posts/');
-      // Filter posts by the user ID (either the current user or the specified user)
-      const targetUserId = userId ? parseInt(userId) : user?.id;
-      const filteredPosts = response.data.filter((post: Post) => post.user === targetUserId);
-      setUserPosts(filteredPosts);
+      const targetUserId = userId ? userId : user?.id;
+      const url = `/api/users/${targetUserId}/posts/`;
+      const response = await axios.get(url);
+      setUserPosts(response.data);
       setError(null);
     } catch (err) {
       console.error('Error fetching user posts:', err);
@@ -91,7 +91,7 @@ const Profile: React.FC = () => {
         await axios.post(`/api/users/${userId}/follow/`);
         setIsFollowing(true);
       }
-      // Refresh the profile to update follower counts
+
       fetchUserProfile();
     } catch (err) {
       console.error('Error toggling follow status:', err);
@@ -99,19 +99,6 @@ const Profile: React.FC = () => {
     }
   };
 
-  const handleCreatePost = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newPostContent.trim()) return;
-
-    try {
-      const response = await axios.post('/api/posts/', { content: newPostContent });
-      setUserPosts([response.data, ...userPosts]);
-      setNewPostContent('');
-    } catch (err) {
-      console.error('Error creating post:', err);
-      setError('Failed to create post. Please try again.');
-    }
-  };
 
   const handleDeletePost = async (postId: number) => {
     try {
@@ -120,6 +107,37 @@ const Profile: React.FC = () => {
     } catch (err) {
       console.error('Error deleting post:', err);
       setError('Failed to delete post. Please try again.');
+    }
+  };
+
+  const handleEditPost = (post: Post) => {
+    setEditingPostId(post.id);
+    setEditedContent(post.content);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingPostId(null);
+    setEditedContent('');
+  };
+
+  const handleSaveEdit = async (postId: number) => {
+    try {
+      const response = await axios.put(`/api/posts/${postId}/`, {
+        content: editedContent
+      });
+
+      // Update the post in the local state
+      setUserPosts(userPosts.map(post => 
+        post.id === postId ? { ...post, content: editedContent } : post
+      ));
+
+      // Reset editing state
+      setEditingPostId(null);
+      setEditedContent('');
+      setError(null);
+    } catch (err) {
+      console.error('Error updating post:', err);
+      setError('Failed to update post. Please try again.');
     }
   };
 
@@ -132,46 +150,29 @@ const Profile: React.FC = () => {
       <div className="card" style={{ marginBottom: '20px' }}>
         <h2>Profile</h2>
         {userProfile && (
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
+            <div>
+              <div style={{textAlign: 'center', marginBottom: '15px'}}>
                 <p><strong>Username:</strong> {userProfile.username}</p>
                 <p><strong>Email:</strong> {userProfile.email}</p>
                 <p><strong>Followers:</strong> {userProfile.followers_count}</p>
                 <p><strong>Following:</strong> {userProfile.following_count}</p>
               </div>
               {!isOwnProfile && (
-                <button 
-                  onClick={handleFollowToggle}
-                  className={`btn ${isFollowing ? 'btn-secondary' : 'btn-primary'}`}
-                >
-                  {isFollowing ? 'Unfollow' : 'Follow'}
-                </button>
+                  <div style={{textAlign: 'center'}}>
+                    <button
+                        onClick={handleFollowToggle}
+                        className={`btn ${isFollowing ? 'btn-secondary' : 'btn-primary'}`}
+                    >
+                      {isFollowing ? 'Unfollow' : 'Follow'}
+                    </button>
+                  </div>
               )}
             </div>
-          </div>
         )}
       </div>
 
       {error && <div className="alert alert-danger">{error}</div>}
 
-      {isOwnProfile && (
-        <div className="card" style={{ marginBottom: '20px' }}>
-          <h3>Create Post</h3>
-          <form onSubmit={handleCreatePost}>
-            <div className="form-group">
-              <textarea
-                className="form-control"
-                value={newPostContent}
-                onChange={(e) => setNewPostContent(e.target.value)}
-                placeholder="What's on your mind?"
-                rows={3}
-              />
-            </div>
-            <button type="submit" className="btn btn-primary">Post</button>
-          </form>
-        </div>
-      )}
 
       <h3>{isOwnProfile ? 'Your Posts' : `${userProfile?.username}'s Posts`}</h3>
       {userPosts.length === 0 ? (
@@ -183,15 +184,42 @@ const Profile: React.FC = () => {
               <strong>{userProfile?.username}</strong>
               <small>{new Date(post.created_at).toLocaleString()}</small>
             </div>
-            <p>{post.content}</p>
-            <div className="post-actions">
-              {isOwnProfile && (
-                <button onClick={() => handleDeletePost(post.id)}>
-                  Delete
-                </button>
-              )}
-              <span>Likes: {post.likes_count}</span>
-            </div>
+
+            {editingPostId === post.id ? (
+              <div className="edit-form">
+                <textarea 
+                  className="form-control" 
+                  value={editedContent}
+                  onChange={(e) => setEditedContent(e.target.value)}
+                  rows={4}
+                />
+                <div className="post-actions" style={{ marginTop: '10px' }}>
+                  <button onClick={() => handleSaveEdit(post.id)}>
+                    Save
+                  </button>
+                  <button onClick={handleCancelEdit}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p>{post.content}</p>
+                <div className="post-actions">
+                  {isOwnProfile && (
+                    <>
+                      <button onClick={() => handleEditPost(post)}>
+                        Edit
+                      </button>
+                      <button onClick={() => handleDeletePost(post.id)}>
+                        Delete
+                      </button>
+                    </>
+                  )}
+                  <span>Likes: {post.likes_count}</span>
+                </div>
+              </>
+            )}
           </div>
         ))
       )}

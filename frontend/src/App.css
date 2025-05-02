@@ -101,3 +101,12 @@
 .post-actions button:hover {
   text-decoration: underline;
 }
+
+.liked-button {
+  color: #e74c3c !important;
+  font-weight: bold;
+}
+
+.liked-button:hover {
+  color: #c0392b !important;
+}
